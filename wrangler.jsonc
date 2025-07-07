@@ -32,6 +32,18 @@
    * Note: Use secrets to store sensitive data.
    * https://developers.cloudflare.com/workers/configuration/secrets/
    */
+  "secrets_store_secrets": [
+    {
+      "binding": "OPENAI_API_KEY",
+      "store_id": "52ec5e5007784e308306e4a3ce4b7cdf",
+      "secret_name": "OPENAI_API_KEY",
+    },
+    {
+      "binding": "TWILIO_USERNAME_PASSWORD",
+      "store_id": "52ec5e5007784e308306e4a3ce4b7cdf",
+      "secret_name": "TWILIO_USERNAME_PASSWORD",
+    },
+  ],
 
   /**
    * Static Assets
