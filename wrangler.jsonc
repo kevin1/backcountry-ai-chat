@@ -7,6 +7,13 @@
   "name": "backcountry-ai-chat",
   "main": "src/index.ts",
   "compatibility_date": "2025-07-05",
+  "workflows": [
+    {
+      "name": "backcountry-ai-chat",
+      "binding": "BACKCOUNTRY_AI_CHAT_WORKFLOW",
+      "class_name": "BackcountryAIChatWorkflow",
+    },
+  ],
   "observability": {
     "enabled": true,
   },

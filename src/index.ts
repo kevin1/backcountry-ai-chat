@@ -14,6 +14,7 @@
 import OpenAI from "openai";
 import * as z from "zod/v4";
 import { smsCharacterReplacement } from "./smsCharacterReplacement";
+import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 const phoneNumberSchema = z.string().regex(/^\+1[0-9]{10}$/);
 
@@ -22,6 +23,8 @@ const twilioSmsSchema = z.object({
   To: phoneNumberSchema,
   Body: z.string(),
 });
+
+type TwilioSMS = z.infer<typeof twilioSmsSchema>;
 
 const coordinateSchema = z.union([z.tuple([z.number()]), z.tuple([z.int(), z.number(), z.number().optional()])]);
 
@@ -86,11 +89,11 @@ async function getModelResponse(userMessage: string, openai: OpenAI): Promise<st
     response = await openai.responses.create({
       prompt: {
         id: "pmpt_6869e3d835548193a8f58cf991c030ce06b7bf11c59935bf",
-        version: "11",
+        version: "12",
       },
-      model: "o4-mini-2025-04-16",
+      model: "o3-2025-04-16",
       reasoning: {
-        effort: "high",
+        effort: "medium",
       },
       previous_response_id: response?.id,
       input,
@@ -222,6 +225,76 @@ interface SecretStoreSecret {
 export interface Env {
   OPENAI_API_KEY: SecretStoreSecret;
   TWILIO_USERNAME_PASSWORD: SecretStoreSecret;
+  BACKCOUNTRY_AI_CHAT_WORKFLOW: Workflow<Params>;
+}
+
+type Params = {
+  requestMessage: TwilioSMS;
+};
+
+// The Workflow calls the model and sends the response SMS.
+export class BackcountryAIChatWorkflow extends WorkflowEntrypoint<Env, Params> {
+  // Define a run() method
+  async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
+    const responseText = await step.do(
+      "call model",
+      {
+        retries: {
+          limit: 5,
+          delay: "5 second",
+          backoff: "exponential",
+        },
+        timeout: "15 minutes",
+      },
+      async () => {
+        const OPENAI_API_KEY = await this.env.OPENAI_API_KEY.get();
+
+        try {
+          return await getModelResponse(event.payload.requestMessage.Body, new OpenAI({ apiKey: OPENAI_API_KEY }));
+        } catch (e) {
+          console.error(e);
+          return "Error calling model: " + String(e);
+        }
+      },
+    );
+
+    await step.do(
+      "send sms",
+      {
+        retries: {
+          limit: 5,
+          delay: "2 second",
+          backoff: "exponential",
+        },
+        timeout: "15 minutes",
+      },
+      async () => {
+        const TWILIO_USERNAME_PASSWORD = await this.env.TWILIO_USERNAME_PASSWORD.get();
+
+        const formData = new FormData();
+        formData.append("To", event.payload.requestMessage.From);
+        formData.append("From", event.payload.requestMessage.To);
+        formData.append("Body", responseText);
+
+        const twilioAccountId = TWILIO_USERNAME_PASSWORD.split(":")[0];
+        const twilioMessagesEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountId}/Messages.json`;
+        const twilioSendResponse = await fetch(twilioMessagesEndpoint, {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Basic ${btoa(TWILIO_USERNAME_PASSWORD)}`,
+          },
+        });
+
+        return {
+          status: twilioSendResponse.status,
+          body: await twilioSendResponse.json(),
+        };
+      },
+    );
+
+    return responseText;
+  }
 }
 
 export default {
@@ -238,40 +311,14 @@ export default {
       return new Response(requestMessage.error.message, { status: 400 });
     }
 
-    const [OPENAI_API_KEY, TWILIO_USERNAME_PASSWORD] = await Promise.all([
-      env.OPENAI_API_KEY.get(),
-      env.TWILIO_USERNAME_PASSWORD.get(),
-    ]);
-
-    // Call the model asynchronously since Twilio has a 15-sec timeout for webhooks.
-    ctx.waitUntil(
-      (async () => {
-        let responseText = "";
-        try {
-          responseText = await getModelResponse(requestMessage.data.Body, new OpenAI({ apiKey: OPENAI_API_KEY }));
-        } catch (e) {
-          console.error(e);
-          responseText = "Error calling model: " + String(e);
-        }
-        console.log(responseText);
-
-        const formData = new FormData();
-        formData.append("To", requestMessage.data.From);
-        formData.append("From", requestMessage.data.To);
-        formData.append("Body", responseText);
-
-        const twilioAccountId = TWILIO_USERNAME_PASSWORD.split(":")[0];
-        const twilioMessagesEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountId}/Messages.json`;
-        const twilioSendResponse = await fetch(twilioMessagesEndpoint, {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Basic ${btoa(TWILIO_USERNAME_PASSWORD)}`,
-          },
-        });
-        console.log(JSON.stringify({ status: twilioSendResponse.status, body: await twilioSendResponse.text() }));
-      })(),
-    );
+    // Call the model asynchronously since Twilio has a 15-sec timeout for
+    // webhooks and Cloudflare ctx.waitUntil has a 30-sec timeout after the
+    // response is sent.
+    const workflowInstance = await env.BACKCOUNTRY_AI_CHAT_WORKFLOW.create({
+      id: crypto.randomUUID(),
+      params: { requestMessage: requestMessage.data },
+    });
+    console.log(`created workflow ${workflowInstance.id}`);
 
     // Return empty response to indicate success.
     // This is equivalent to `new MessagingResponse().toString()` with Twilio SDK.

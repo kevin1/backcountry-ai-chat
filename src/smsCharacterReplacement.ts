@@ -1,283 +1,286 @@
-const replacementLookup = new Map([
-  [0x00bb, '"'], // » right-pointing double angle quotation mark
-  [0x201c, '"'], // " left double quotation mark
-  [0x201d, '"'], // " right double quotation mark
-  [0x02ba, '"'], // ʺ modifier letter double prime
-  [0x02ee, '"'], // ˮ modifier letter double apostrophe
-  [0x201f, '"'], // ‟ double high-reversed-9 quotation mark
-  [0x275d, '"'], // ❝ heavy double turned comma quotation mark ornament
-  [0x275e, '"'], // ❞ heavy double comma quotation mark ornament
-  [0x301d, '"'], // 〝 reversed double prime quotation mark
-  [0x301e, '"'], // 〞 double prime quotation mark
-  [0xff02, '"'], // ＂ fullwidth quotation mark
-  [0x2018, ""], // nan left single quotation mark
-  [0x2019, ""], // nan right single quotation mark
-  [0x02bb, ""], // ʻ modifier letter turned comma
-  [0x02c8, ""], // ˈ modifier letter vertical line
-  [0x02bc, ""], // ʼ modifier letter apostrophe
-  [0x02bd, ""], // ʽ modifier letter reversed comma
-  [0x02b9, ""], // ʹ modifier letter prime
-  [0x201b, ""], // ‛ single high-reversed-9 quotation mark
-  [0xff07, ""], // nan fullwidth apostrophe
-  [0x00b4, ""], // ´ acute accent
-  [0x02ca, ""], // ˊ modifier letter acute accent
-  [0x0060, ""], // ` grave accent
-  [0x02cb, ""], // ˋ modifier letter grave accent
-  [0x275b, ""], // ❛ heavy single turned comma quotation mark ornament
-  [0x275c, ""], // ❜ heavy single comma quotation mark ornament
-  [0x0313, ""], // ̓ combining comma above
-  [0x0314, ""], // ̔ combining reversed comma above
-  [0xfe10, ""], // ︐ presentation form for vertical comma
-  [0xfe11, ""], // ︑ presentation form for vertical ideographic comma
-  [0x00f7, "/"], // ÷ division sign
-  [0x00bc, "1/4"], // ¼ vulgar fraction one quarter
-  [0x00bd, "1/2"], // ½ vulgar fraction one half
-  [0x00be, "3/4"], // ¾ vulgar fraction three quarters
-  [0x29f8, "/"], // ⧸ big solidus
-  [0x0337, "/"], // ̷ combining short solidus overlay
-  [0x0338, "/"], // ̸ combining long solidus overlay
-  [0x2044, "/"], // ⁄ fraction slash
-  [0x2215, "/"], // ∕ division slash
-  [0xff0f, "/"], // ／ fullwidth solidus
-  [0x29f9, "\\"], // ⧹ big reverse solidus
-  [0x29f5, "\\"], // ⧵ reverse solidus operator
-  [0x20e5, "\\"], // nan combining reverse solidus overlay
-  [0xfe68, "\\"], // ﹨ small reverse solidus
-  [0xff3c, "\\"], // ＼ fullwidth reverse solidus
-  [0x0332, "_"], // ̲ combining low line
-  [0xff3f, "_"], // ＿ fullwidth low line
-  [0x20d2, "|"], // ⃒ combining long vertical line overlay
-  [0x20d3, "|"], // ⃓ combining short vertical line overlay
-  [0x2223, "|"], // ∣ divides
-  [0xff5c, "|"], // ｜ fullwidth vertical line
-  [0x23b8, "|"], // ⎸ left vertical box line
-  [0x23b9, "|"], // ⎹ right vertical box line
-  [0x23d0, "|"], // ⏐ vertical line extension
-  [0x239c, "|"], // ⎜ left parenthesis extension
-  [0x239f, "|"], // ⎟ right parenthesis extension
-  [0x23bc, "-"], // ⎼ horizontal scan line-7
-  [0x23bd, "-"], // ⎽ horizontal scan line-9
-  [0x2015, "-"], // ― horizontal bar
-  [0xfe63, "-"], // ﹣ small hyphen-minus
-  [0xff0d, "-"], // － fullwidth hyphen-minus
-  [0x2010, "-"], // ‐ hyphen
-  [0x2022, "-"], // • bullet
-  [0x2043, "-"], // ⁃ hyphen bullet
-  [0xfe6b, "@"], // ﹫ small commercial at sign
-  [0xff20, "@"], // ＠ fullwidth commercial at sign
-  [0xfe69, "$"], // ﹩ small dollar sign
-  [0xff04, "$"], // ＄ fullwidth dollar sign
-  [0x01c3, "!"], // ǃ Latin letter retroflex click
-  [0xfe15, "!"], // ︕ presentation form for vertical exclamation mark
-  [0xfe57, "!"], // ﹗ small exclamation mark
-  [0xff01, "!"], // ！ fullwidth exclamation mark
-  [0xfe5f, "#"], // ﹟ small number sign
-  [0xff03, "#"], // ＃ fullwidth number sign
-  [0xfe6a, "%"], // ﹪ small percent sign
-  [0xff05, "%"], // ％ fullwidth percent sign
-  [0xfe60, "&"], // ﹠ small ampersand
-  [0xff06, "&"], // ＆ fullwidth ampersand
-  [0x201a, ","], // nan single low-9 quotation mark
-  [0x0326, ","], // ̦ combining comma below
-  [0xfe50, ","], // ﹐ small comma
-  [0x3001, ","], // 、 ideographic comma
-  [0xfe51, ","], // ﹑ small ideographic comma
-  [0xff0c, ","], // ， fullwidth comma
-  [0xff64, ","], // ､ halfwidth ideographic comma
-  [0x2768, "("], // ❨ medium left parenthesis ornament
-  [0x276a, "("], // ❪ medium flattened left parenthesis ornament
-  [0xfe59, "("], // ﹙ small left parenthesis
-  [0xff08, "("], // （ fullwidth left parenthesis
-  [0x27ee, "("], // ⟮ mathematical left flattened parenthesis
-  [0x2985, "("], // ⦅ left white parenthesis
-  [0x2769, ")"], // ❩ medium right parenthesis ornament
-  [0x276b, ")"], // ❫ medium flattened right parenthesis ornament
-  [0xfe5a, ")"], // ﹚ small right parenthesis
-  [0xff09, ")"], // ） fullwidth right parenthesis
-  [0x27ef, ")"], // ⟯ mathematical right flattened parenthesis
-  [0x2986, ")"], // ⦆ right white parenthesis
-  [0x204e, "*"], // ⁎ low asterisk
-  [0x2217, "*"], // ∗ asterisk operator
-  [0x229b, "*"], // ⊛ circled asterisk operator
-  [0x2722, "*"], // ✢ four teardrop-spoked asterisk
-  [0x2723, "*"], // ✣ four balloon-spoked asterisk
-  [0x2724, "*"], // ✤ heavy four balloon-spoked asterisk
-  [0x2725, "*"], // ✥ four club-spoked asterisk
-  [0x2731, "*"], // ✱ heavy asterisk
-  [0x2732, "*"], // ✲ open center asterisk
-  [0x2733, "*"], // ✳ eight spoked asterisk
-  [0x273a, "*"], // ✺ sixteen pointed asterisk
-  [0x273b, "*"], // ✻ teardrop-spoked asterisk
-  [0x273c, "*"], // ✼ open center teardrop-spoked asterisk
-  [0x273d, "*"], // ✽ heavy teardrop-spoked asterisk
-  [0x2743, "*"], // ❃ heavy teardrop-spoked pinwheel asterisk
-  [0x2749, "*"], // ❉ balloon-spoked asterisk
-  [0x274a, "*"], // ❊ eight teardrop-spoked propeller asterisk
-  [0x274b, "*"], // ❋ heavy eight teardrop-spoked propeller asterisk
-  [0x29c6, "*"], // ⧆ squared asterisk
-  [0xfe61, "*"], // ﹡ small asterisk
-  [0xff0a, "*"], // ＊ fullwidth asterisk
-  [0x02d6, "+"], // ˖ modifier letter plus sign
-  [0xfe62, "+"], // ﹢ small plus sign
-  [0xff0b, "+"], // ＋ fullwidth plus sign
-  [0x3002, "."], // 。 ideographic full stop
-  [0xfe52, "."], // ﹒ small full stop
-  [0xff0e, "."], // ． fullwidth full stop
-  [0xff61, "."], // ｡ halfwidth ideographic full stop
-  [0xff10, "0"], // 0 fullwidth digit zero
-  [0xff11, "1"], // 1 fullwidth digit one
-  [0xff12, "2"], // 2 fullwidth digit two
-  [0xff13, "3"], // 3 fullwidth digit three
-  [0xff14, "4"], // 4 fullwidth digit four
-  [0xff15, "5"], // 5 fullwidth digit five
-  [0xff16, "6"], // 6 fullwidth digit six
-  [0xff17, "7"], // 7 fullwidth digit seven
-  [0xff18, "8"], // 8 fullwidth digit eight
-  [0xff19, "9"], // 9 fullwidth digit nine
-  [0x02d0, ":"], // ː modifier letter triangular colon
-  [0x02f8, ":"], // ˸ modifier letter raised colon
-  [0x2982, ":"], // ⦂ z notation type colon
-  [0xa789, ":"], // ꞉ modifier letter colon
-  [0xfe13, ":"], // ︓ presentation form for vertical colon
-  [0xff1a, ":"], // ： fullwidth colon
-  [0x204f, ";"], // ⁏ reversed semicolon
-  [0xfe14, ";"], // ︔ presentation form for vertical semicolon
-  [0xfe54, ";"], // ﹔ small semicolon
-  [0xff1b, ";"], // ； fullwidth semicolon
-  [0xfe64, "<"], // ﹤ small less-than sign
-  [0xff1c, "<"], // ＜ fullwidth less-than sign
-  [0x0347, "="], // ͇ combining equals sign below
-  [0xa78a, "="], // ꞊ modifier letter short equals sign
-  [0xfe66, "="], // ﹦ small equals sign
-  [0xff1d, "="], // ＝ fullwidth equals sign
-  [0xfe65, ">"], // ﹥ small greater-than sign
-  [0xff1e, ">"], // ＞ fullwidth greater-than sign
-  [0xfe16, "?"], // ︖ presentation form for vertical question mark
-  [0xfe56, "?"], // ﹖ small question mark
-  [0xff1f, "?"], // ？ fullwidth question mark
-  [0xff21, "A"], // Ａ fullwidth Latin capital letter a
-  [0x1d00, "A"], // ᴀ Latin letter small capital a
-  [0xff22, "B"], // Ｂ fullwidth Latin capital letter b
-  [0x0299, "B"], // ʙ Latin letter small capital b
-  [0xff23, "C"], // Ｃ fullwidth Latin capital letter c
-  [0x1d04, "C"], // ᴄ Latin letter small capital c
-  [0xff24, "D"], // Ｄ fullwidth Latin capital letter d
-  [0x1d05, "D"], // ᴅ Latin letter small capital d
-  [0xff25, "E"], // Ｅ fullwidth Latin capital letter e
-  [0x1d07, "E"], // ᴇ Latin letter small capital e
-  [0xff26, "F"], // Ｆ fullwidth Latin capital letter f
-  [0xa730, "F"], // ꜰ Latin letter small capital f
-  [0xff27, "G"], // Ｇ fullwidth Latin capital letter g
-  [0x0262, "G"], // ɢ Latin letter small capital g
-  [0xff28, "H"], // Ｈ fullwidth Latin capital letter h
-  [0x029c, "H"], // ʜ Latin letter small capital h
-  [0xff29, "I"], // Ｉ fullwidth Latin capital letter i
-  [0x026a, "I"], // ɪ Latin letter small capital i
-  [0xff2a, "J"], // Ｊ fullwidth Latin capital letter j
-  [0x1d0a, "J"], // ᴊ Latin letter small capital j
-  [0xff2b, "K"], // Ｋ fullwidth Latin capital letter k
-  [0x1d0b, "K"], // ᴋ Latin letter small capital k
-  [0xff2c, "L"], // Ｌ fullwidth Latin capital letter l
-  [0x029f, "L"], // ʟ Latin letter small capital l
-  [0xff2d, "M"], // Ｍ fullwidth Latin capital letter m
-  [0x1d0d, "M"], // ᴍ Latin letter small capital m
-  [0xff2e, "N"], // Ｎ fullwidth Latin capital letter n
-  [0x0274, "N"], // ɴ Latin letter small capital n
-  [0xff2f, "O"], // Ｏ fullwidth Latin capital letter o
-  [0x1d0f, "O"], // ᴏ Latin letter small capital o
-  [0xff30, "P"], // Ｐ fullwidth Latin capital letter p
-  [0x1d18, "P"], // ᴘ Latin letter small capital p
-  [0xff31, "Q"], // Ｑ fullwidth Latin capital letter q
-  [0xff32, "R"], // Ｒ fullwidth Latin capital letter r
-  [0x0280, "R"], // ʀ Latin letter small capital r
-  [0xff33, "S"], // Ｓ fullwidth Latin capital letter s
-  [0xa731, "S"], // ꜱ Latin letter small capital s
-  [0xff34, "T"], // Ｔ fullwidth Latin capital letter t
-  [0x1d1b, "T"], // ᴛ Latin letter small capital t
-  [0xff35, "U"], // Ｕ fullwidth Latin capital letter u
-  [0x1d1c, "U"], // ᴜ Latin letter small capital u
-  [0xff36, "V"], // Ｖ fullwidth Latin capital letter v
-  [0x1d20, "V"], // ᴠ Latin letter small capital v
-  [0xff37, "W"], // Ｗ fullwidth Latin capital letter w
-  [0x1d21, "W"], // ᴡ Latin letter small capital w
-  [0xff38, "X"], // Ｘ fullwidth Latin capital letter x
-  [0xff39, "Y"], // Ｙ fullwidth Latin capital letter y
-  [0x028f, "Y"], // ʏ Latin letter small capital y
-  [0xff3a, "Z"], // Ｚ fullwidth Latin capital letter z
-  [0x1d22, "Z"], // ᴢ Latin letter small capital z
-  [0x02c6, "^"], // ˆ modifier letter circumflex accent
-  [0x0302, "^"], // ̂ combining circumflex accent
-  [0xff3e, "^"], // ＾ fullwidth circumflex accent
-  [0x1dcd, "^"], // ᷍ combining double circumflex above
-  [0x2774, "{"], // ❴ medium left curly bracket ornament
-  [0xfe5b, "{"], // ﹛ small left curly bracket
-  [0xff5b, "{"], // ｛ fullwidth left curly bracket
-  [0x2775, "}"], // ❵ medium right curly bracket ornament
-  [0xfe5c, "}"], // ﹜ small right curly bracket
-  [0xff5d, "}"], // ｝ fullwidth right curly bracket
-  [0xff3b, "["], // ［ fullwidth left square bracket
-  [0xff3d, "]"], // ］ fullwidth right square bracket
-  [0x02dc, "~"], // ˜ small tilde
-  [0x02f7, "~"], // ˷ modifier letter low tilde
-  [0x0303, "~"], // ̃ combining tilde
-  [0x0330, "~"], // ̰ combining tilde below
-  [0x0334, "~"], // ̴ combining tilde overlay
-  [0x223c, "~"], // ∼ tilde operator
-  [0xff5e, "~"], // ～ fullwidth tilde
-  [0x00a0, ""], // nan no-break space
-  [0x2000, ""], // nan whitespace: en quad
-  [0x2001, ""], // nan whitespace: medium mathematical space
-  [0x2002, ""], // nan whitespace: en space
-  [0x2003, ""], // nan whitespace: em space
-  [0x2004, ""], // nan whitespace: three-per-em space
-  [0x2005, ""], // nan whitespace: four-per-em space
-  [0x2006, ""], // nan whitespace: six-per-em space
-  [0x2007, ""], // nan whitespace: figure space
-  [0x2008, ""], // nan whitespace: punctuation space
-  [0x2009, ""], // nan whitespace: thin space
-  [0x200a, ""], // nan whitespace: hair space
-  [0x200b, ""], // nan zero width space
-  [0x202f, ""], // nan narrow no-break space
-  [0x205f, ""], // nan medium mathematical space
-  [0x3000, ""], // nan ideographic space
-  [0xfeff, ""], // nan zero width no-break space
-  [0x008d, ""], // nan reverse line feed
-  [0x009f, ""], // nan <control>
-  [0x0080, ""], // nan c1 control codes
-  [0x0090, ""], // nan device control string
-  [0x009b, ""], // nan control sequence introducer
-  [0x0010, ""], // nan escape
-  [0x0009, ""], // nan tab (7 spaces based on print statement in python interpreter)
-  [0x0000, ""], // nan nan
-  [0x0003, ""], // nan end of text
-  [0x0004, ""], // nan end of transmission
-  [0x0017, ""], // nan end of transmission block
-  [0x0019, ""], // nan end of medium
-  [0x0011, ""], // nan device control one
-  [0x0012, ""], // nan device control two
-  [0x0013, ""], // nan device control three
-  [0x0014, ""], // nan device control four
-  [0x2017, "_"], // ‗ double low line
-  [0x2014, "-"], // — em dash
-  [0x2013, "-"], // – en dash
-  [0x2039, ">"], // ‹ single left-pointing angle quotation mark
-  [0x203a, "<"], // › single right-pointing angle quotation mark
-  [0x203c, "!!"], // ‼ double exclamation mark
-  [0x201e, '"'], // „ double low quotation mark
-  [0x2026, "..."], // … horizontal ellipsis
-  [0x2028, ""], // nan whitespace: line separator
-  [0x2029, ""], // nan whitespace: paragraph separator
-  [0x2060, ""], // ⁠ word joiner
-]);
+const replacementLookup: {
+  [key: string]: string;
+} = {
+  "\u00ab": '"', // LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
+  "\u00bb": '"', // RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
+  "\u201c": '"', // LEFT DOUBLE QUOTATION MARK
+  "\u201d": '"', // RIGHT DOUBLE QUOTATION MARK
+  "\u02ba": '"', // MODIFIER LETTER DOUBLE PRIME
+  "\u02ee": '"', // MODIFIER LETTER DOUBLE APOSTROPHE
+  "\u201f": '"', // DOUBLE HIGH-REVERSED-9 QUOTATION MARK
+  "\u201E": '"', // DOUBLE LOW-9 QUOTATION MARK
+  "\u275d": '"', // HEAVY DOUBLE TURNED COMMA QUOTATION MARK ORNAMENT
+  "\u275e": '"', // HEAVY DOUBLE COMMA QUOTATION MARK ORNAMENT
+  "\u301d": '"', // REVERSED DOUBLE PRIME QUOTATION MARK
+  "\u301e": '"', // DOUBLE PRIME QUOTATION MARK
+  "\uff02": '"', // FULLWIDTH QUOTATION MARK
+  "\u2018": "'", // LEFT SINGLE QUOTATION MARK
+  "\u2019": "'", // RIGHT SINGLE QUOTATION MARK
+  "\u02BB": "'", // MODIFIER LETTER TURNED COMMA
+  "\u02c8": "'", // MODIFIER LETTER VERTICAL LINE
+  "\u02bc": "'", // MODIFIER LETTER APOSTROPHE
+  "\u02bd": "'", // MODIFIER LETTER REVERSED COMMA
+  "\u02b9": "'", // MODIFIER LETTER PRIME
+  "\u201b": "'", // SINGLE HIGH-REVERSED-9 QUOTATION MARK
+  "\uff07": "'", // FULLWIDTH APOSTROPHE
+  "\u00b4": "'", // ACUTE ACCENT
+  "\u02ca": "'", // MODIFIER LETTER ACUTE ACCENT
+  "\u0060": "'", // GRAVE ACCENT
+  "\u02cb": "'", // MODIFIER LETTER GRAVE ACCENT
+  "\u275b": "'", // HEAVY SINGLE TURNED COMMA QUOTATION MARK ORNAMENT
+  "\u275c": "'", // HEAVY SINGLE COMMA QUOTATION MARK ORNAMENT
+  "\u0313": "'", // COMBINING COMMA ABOVE
+  "\u0314": "'", // COMBINING REVERSED COMMA ABOVE
+  "\ufe10": "'", // PRESENTATION FORM FOR VERTICAL COMMA
+  "\ufe11": "'", // PRESENTATION FORM FOR VERTICAL IDEOGRAPHIC COMMA
+  "\u00F7": "/", // DIVISION SIGN
+  "\u00bc": "1/4", // VULGAR FRACTION ONE QUARTER
+  "\u00bd": "1/2", // VULGAR FRACTION ONE HALF
+  "\u00be": "3/4", // VULGAR FRACTION THREE QUARTERS
+  "\u29f8": "/", // BIG SOLIDUS
+  "\u0337": "/", // COMBINING SHORT SOLIDUS OVERLAY
+  "\u0338": "/", // COMBINING LONG SOLIDUS OVERLAY
+  "\u2044": "/", // FRACTION SLASH
+  "\u2215": "/", // DIVISION SLASH
+  "\uff0f": "/", // FULLWIDTH SOLIDUS
+  "\u29f9": "\\", // BIG REVERSE SOLIDUS
+  "\u29f5": "\\", // REVERSE SOLIDUS OPERATOR
+  "\u20e5": "\\", // COMBINING REVERSE SOLIDUS OVERLAY
+  "\ufe68": "\\", // SMALL REVERSE SOLIDUS
+  "\uff3c": "\\", // FULLWIDTH REVERSE SOLIDUS
+  "\u0332": "_", // COMBINING LOW LINE
+  "\uff3f": "_", // FULLWIDTH LOW LINE
+  "\u20d2": "|", // COMBINING LONG VERTICAL LINE OVERLAY
+  "\u20d3": "|", // COMBINING SHORT VERTICAL LINE OVERLAY
+  "\u2223": "|", // DIVIDES
+  "\uff5c": "|", // FULLWIDTH VERTICAL LINE
+  "\u23b8": "|", // LEFT VERTICAL BOX LINE
+  "\u23b9": "|", // RIGHT VERTICAL BOX LINE
+  "\u23d0": "|", // VERTICAL LINE EXTENSION
+  "\u239c": "|", // LEFT PARENTHESIS EXTENSION
+  "\u239f": "|", // RIGHT PARENTHESIS EXTENSION
+  "\u23bc": "-", // HORIZONTAL SCAN LINE-7
+  "\u23bd": "-", // HORIZONTAL SCAN LINE-9
+  "\u2015": "-", // HORIZONTAL BAR
+  "\ufe63": "-", // SMALL HYPHEN-MINUS
+  "\uff0d": "-", // FULLWIDTH HYPHEN-MINUS
+  "\u2010": "-", // HYPHEN
+  "\u2043": "-", // HYPHEN BULLET
+  "\ufe6b": "@", // SMALL COMMERCIAL AT
+  "\uff20": "@", // FULLWIDTH COMMERCIAL AT
+  "\ufe69": "$", // SMALL DOLLAR SIGN
+  "\uff04": "$", // FULLWIDTH DOLLAR SIGN
+  "\u01c3": "!", // LATIN LETTER RETROFLEX CLICK
+  "\ufe15": "!", // PRESENTATION FORM FOR VERTICAL EXLAMATION MARK
+  "\ufe57": "!", // SMALL EXCLAMATION MARK
+  "\uff01": "!", // FULLWIDTH EXCLAMATION MARK
+  "\ufe5f": "#", // SMALL NUMBER SIGN
+  "\uff03": "#", // FULLWIDTH NUMBER SIGN
+  "\ufe6a": "%", // SMALL PERCENT SIGN
+  "\uff05": "%", // FULLWIDTH PERCENT SIGN
+  "\ufe60": "&", // SMALL AMPERSAND
+  "\uff06": "&", // FULLWIDTH AMPERSAND
+  "\u201a": ",", // SINGLE LOW-9 QUOTATION MARK
+  "\u0326": ",", // COMBINING COMMA BELOW
+  "\ufe50": ",", // SMALL COMMA
+  "\ufe51": ",", // SMALL IDEOGRAPHIC COMMA
+  "\uff0c": ",", // FULLWIDTH COMMA
+  "\uff64": ",", // HALFWIDTH IDEOGRAPHIC COMMA
+  "\u2768": "(", // MEDIUM LEFT PARENTHESIS ORNAMENT
+  "\u276a": "(", // MEDIUM FLATTENED LEFT PARENTHESIS ORNAMENT
+  "\ufe59": "(", // SMALL LEFT PARENTHESIS
+  "\uff08": "(", // FULLWIDTH LEFT PARENTHESIS
+  "\u27ee": "(", // MATHEMATICAL LEFT FLATTENED PARENTHESIS
+  "\u2985": "(", // LEFT WHITE PARENTHESIS
+  "\u2769": ")", // MEDIUM RIGHT PARENTHESIS ORNAMENT
+  "\u276b": ")", // MEDIUM FLATTENED RIGHT PARENTHESIS ORNAMENT
+  "\ufe5a": ")", // SMALL RIGHT PARENTHESIS
+  "\uff09": ")", // FULLWIDTH RIGHT PARENTHESIS
+  "\u27ef": ")", // MATHEMATICAL RIGHT FLATTENED PARENTHESIS
+  "\u2986": ")", // RIGHT WHITE PARENTHESIS
+  "\u204e": "*", // LOW ASTERISK
+  "\u2217": "*", // ASTERISK OPERATOR
+  "\u229B": "*", // CIRCLED ASTERISK OPERATOR
+  "\u2722": "*", // FOUR TEARDROP-SPOKED ASTERISK
+  "\u2723": "*", // FOUR BALLOON-SPOKED ASTERISK
+  "\u2724": "*", // HEAVY FOUR BALLOON-SPOKED ASTERISK
+  "\u2725": "*", // FOUR CLUB-SPOKED ASTERISK
+  "\u2731": "*", // HEAVY ASTERISK
+  "\u2732": "*", // OPEN CENTRE ASTERISK
+  "\u2733": "*", // EIGHT SPOKED ASTERISK
+  "\u273a": "*", // SIXTEEN POINTED ASTERISK
+  "\u273b": "*", // TEARDROP-SPOKED ASTERISK
+  "\u273c": "*", // OPEN CENTRE TEARDROP-SPOKED ASTERISK
+  "\u273d": "*", // HEAVY TEARDROP-SPOKED ASTERISK
+  "\u2743": "*", // HEAVY TEARDROP-SPOKED PINWHEEL ASTERISK
+  "\u2749": "*", // BALLOON-SPOKED ASTERISK
+  "\u274a": "*", // EIGHT TEARDROP-SPOKED PROPELLER ASTERISK
+  "\u274b": "*", // HEAVY EIGHT TEARDROP-SPOKED PROPELLER ASTERISK
+  "\u29c6": "*", // SQUARED ASTERISK
+  "\ufe61": "*", // SMALL ASTERISK
+  "\uff0a": "*", // FULLWIDTH ASTERISK
+  "\u02d6": "+", // MODIFIER LETTER PLUS SIGN
+  "\ufe62": "+", // SMALL PLUS SIGN
+  "\uff0b": "+", // FULLWIDTH PLUS SIGN
+  "\u3002": ".", // IDEOGRAPHIC FULL STOP
+  "\ufe52": ".", // SMALL FULL STOP
+  "\uff0e": ".", // FULLWIDTH FULL STOP
+  "\uff61": ".", // HALFWIDTH IDEOGRAPHIC FULL STOP
+  "\uff10": "0", // FULLWIDTH DIGIT ZERO
+  "\uff11": "1", // FULLWIDTH DIGIT ONE
+  "\uff12": "2", // FULLWIDTH DIGIT TWO
+  "\uff13": "3", // FULLWIDTH DIGIT THREE
+  "\uff14": "4", // FULLWIDTH DIGIT FOUR
+  "\uff15": "5", // FULLWIDTH DIGIT FIVE
+  "\uff16": "6", // FULLWIDTH DIGIT SIX
+  "\uff17": "7", // FULLWIDTH DIGIT SEVEN
+  "\uff18": "8", // FULLWIDTH DIGIT EIGHT
+  "\uff19": "9", // FULLWIDTH DIGIT NINE
+  "\u02d0": ":", // MODIFIER LETTER TRIANGULAR COLON
+  "\u02f8": ":", // MODIFIER LETTER RAISED COLON
+  "\u2982": ":", // Z NOTATION TYPE COLON
+  "\ua789": ":", // MODIFIER LETTER COLON
+  "\ufe13": ":", // PRESENTATION FORM FOR VERTICAL COLON
+  "\uff1a": ":", // FULLWIDTH COLON
+  "\u204f": ";", // REVERSED SEMICOLON
+  "\ufe14": ";", // PRESENTATION FORM FOR VERTICAL SEMICOLON
+  "\ufe54": ";", // SMALL SEMICOLON
+  "\uff1b": ";", // FULLWIDTH SEMICOLON
+  "\ufe64": "<", // SMALL LESS-THAN SIGN
+  "\uff1c": "<", // FULLWIDTH LESS-THAN SIGN
+  "\u0347": "=", // COMBINING EQUALS SIGN BELOW
+  "\ua78a": "=", // MODIFIER LETTER SHORT EQUALS SIGN
+  "\ufe66": "=", // SMALL EQUALS SIGN
+  "\uff1d": "=", // FULLWIDTH EQUALS SIGN
+  "\ufe65": ">", // SMALL GREATER-THAN SIGN
+  "\uff1e": ">", // FULLWIDTH GREATER-THAN SIGN
+  "\ufe16": "?", // PRESENTATION FORM FOR VERTICAL QUESTION MARK
+  "\ufe56": "?", // SMALL QUESTION MARK
+  "\uff1f": "?", // FULLWIDTH QUESTION MARK
+  "\uff21": "A", // FULLWIDTH LATIN CAPITAL LETTER A
+  "\u1d00": "A", // LATIN LETTER SMALL CAPITAL A
+  "\uff22": "B", // FULLWIDTH LATIN CAPITAL LETTER B
+  "\u0299": "B", // LATIN LETTER SMALL CAPITAL B
+  "\uff23": "C", // FULLWIDTH LATIN CAPITAL LETTER C
+  "\u1d04": "C", // LATIN LETTER SMALL CAPITAL C
+  "\uff24": "D", // FULLWIDTH LATIN CAPITAL LETTER D
+  "\u1d05": "D", // LATIN LETTER SMALL CAPITAL D
+  "\uff25": "E", // FULLWIDTH LATIN CAPITAL LETTER E
+  "\u1d07": "E", // LATIN LETTER SMALL CAPITAL E
+  "\uff26": "F", // FULLWIDTH LATIN CAPITAL LETTER F
+  "\ua730": "F", // LATIN LETTER SMALL CAPITAL F
+  "\uff27": "G", // FULLWIDTH LATIN CAPITAL LETTER G
+  "\u0262": "G", // LATIN LETTER SMALL CAPITAL G
+  "\uff28": "H", // FULLWIDTH LATIN CAPITAL LETTER H
+  "\u029c": "H", // LATIN LETTER SMALL CAPITAL H
+  "\uff29": "I", // FULLWIDTH LATIN CAPITAL LETTER I
+  "\u026a": "I", // LATIN LETTER SMALL CAPITAL I
+  "\uff2a": "J", // FULLWIDTH LATIN CAPITAL LETTER J
+  "\u1d0a": "J", // LATIN LETTER SMALL CAPITAL J
+  "\uff2b": "K", // FULLWIDTH LATIN CAPITAL LETTER K
+  "\u1d0b": "K", // LATIN LETTER SMALL CAPITAL K
+  "\uff2c": "L", // FULLWIDTH LATIN CAPITAL LETTER L
+  "\u029f": "L", // LATIN LETTER SMALL CAPITAL L
+  "\uff2d": "M", // FULLWIDTH LATIN CAPITAL LETTER M
+  "\u1d0d": "M", // LATIN LETTER SMALL CAPITAL M
+  "\uff2e": "N", // FULLWIDTH LATIN CAPITAL LETTER N
+  "\u0274": "N", // LATIN LETTER SMALL CAPITAL N
+  "\uff2f": "O", // FULLWIDTH LATIN CAPITAL LETTER O
+  "\u1d0f": "O", // LATIN LETTER SMALL CAPITAL O
+  "\uff30": "P", // FULLWIDTH LATIN CAPITAL LETTER P
+  "\u1d18": "P", // LATIN LETTER SMALL CAPITAL P
+  "\uff31": "Q", // FULLWIDTH LATIN CAPITAL LETTER Q
+  "\uff32": "R", // FULLWIDTH LATIN CAPITAL LETTER R
+  "\u0280": "R", // LATIN LETTER SMALL CAPITAL R
+  "\uff33": "S", // FULLWIDTH LATIN CAPITAL LETTER S
+  "\ua731": "S", // LATIN LETTER SMALL CAPITAL S
+  "\uff34": "T", // FULLWIDTH LATIN CAPITAL LETTER T
+  "\u1d1b": "T", // LATIN LETTER SMALL CAPITAL T
+  "\uff35": "U", // FULLWIDTH LATIN CAPITAL LETTER U
+  "\u1d1c": "U", // LATIN LETTER SMALL CAPITAL U
+  "\uff36": "V", // FULLWIDTH LATIN CAPITAL LETTER V
+  "\u1d20": "V", // LATIN LETTER SMALL CAPITAL V
+  "\uff37": "W", // FULLWIDTH LATIN CAPITAL LETTER W
+  "\u1d21": "W", // LATIN LETTER SMALL CAPITAL W
+  "\uff38": "X", // FULLWIDTH LATIN CAPITAL LETTER X
+  "\uff39": "Y", // FULLWIDTH LATIN CAPITAL LETTER Y
+  "\u028f": "Y", // LATIN LETTER SMALL CAPITAL Y
+  "\uff3a": "Z", // FULLWIDTH LATIN CAPITAL LETTER Z
+  "\u1d22": "Z", // LATIN LETTER SMALL CAPITAL Z
+  "\u02c6": "^", // MODIFIER LETTER CIRCUMFLEX ACCENT
+  "\u0302": "^", // COMBINING CIRCUMFLEX ACCENT
+  "\uff3e": "^", // FULLWIDTH CIRCUMFLEX ACCENT
+  "\u1dcd": "^", // COMBINING DOUBLE CIRCUMFLEX ABOVE
+  "\u2774": "{", // MEDIUM LEFT CURLY BRACKET ORNAMENT
+  "\ufe5b": "{", // SMALL LEFT CURLY BRACKET
+  "\uff5b": "{", // FULLWIDTH LEFT CURLY BRACKET
+  "\u2775": "}", // MEDIUM RIGHT CURLY BRACKET ORNAMENT
+  "\ufe5c": "}", // SMALL RIGHT CURLY BRACKET
+  "\uff5d": "}", // FULLWIDTH RIGHT CURLY BRACKET
+  "\uff3b": "[", // FULLWIDTH LEFT SQUARE BRACKET
+  "\uff3d": "]", // FULLWIDTH RIGHT SQUARE BRACKET
+  "\u02dc": "~", // SMALL TILDE
+  "\u02f7": "~", // MODIFIER LETTER LOW TILDE
+  "\u0303": "~", // COMBINING TILDE
+  "\u0330": "~", // COMBINING TILDE BELOW
+  "\u0334": "~", // COMBINING TILDE OVERLAY
+  "\u223c": "~", // TILDE OPERATOR
+  "\uff5e": "~", // FULLWIDTH TILDE
+  "\u00a0": "  ", // NO-BREAK SPACE
+  "\u2000": "  ", // EN QUAD
+  "\u2002": "  ", // EN SPACE
+  "\u2003": "  ", // EM SPACE
+  "\u2004": "  ", // THREE-PER-EM SPACE
+  "\u2005": "  ", // FOUR-PER-EM SPACE
+  "\u2006": "  ", // SIX-PER-EM SPACE
+  "\u2007": "  ", // FIGURE SPACE
+  "\u2008": "  ", // PUNCTUATION SPACE
+  "\u2009": "  ", // THIN SPACE
+  "\u200a": "  ", // HAIR SPACE
+  "\u202f": "  ", // NARROW NO-BREAK SPACE
+  "\u205f": "  ", // MEDIUM MATHEMATICAL SPACE
+  "\u3000": "  ", // IDEOGRAHPIC SPACE
+  "\u008d": "  ", // REVERSE LINE FEED (standard LF looks like \n, this looks like a space)
+  "\u009f": "  ", // <control>
+  "\u0080": "  ", // C1 CONTROL CODES
+  "\u0090": "  ", // DEVICE CONTROL STRING
+  "\u009b": "  ", // CONTROL SEQUENCE INTRODUCER
+  "\u0010": "", // ESCAPE, DATA LINK (not visible)
+  "\u0009": "       ", // TAB (7 spaces based on print statement in Python interpreter)
+  "\u0000": "", // NULL
+  "\u0003": "", // END OF TEXT
+  "\u0004": "", // END OF TRANSMISSION
+  "\u0017": "", // END OF TRANSMISSION BLOCK
+  "\u0019": "", // END OF MEDIUM
+  "\u0011": "", // DEVICE CONTROL ONE
+  "\u0012": "", // DEVICE CONTROL TWO
+  "\u0013": "", // DEVICE CONTROL THREE
+  "\u0014": "", // DEVICE CONTROL FOUR
+  "\u2060": "", // WORD JOINER
+  "\u2017": "_", // DOUBLE LOW LINE
+  "\u2014": "-", // EM DASH
+  "\u2013": "-", // EN DASH
+  "\u2039": ">", // Single left-pointing angle quotation mark
+  "\u203A": "<", // Single right-pointing angle quotation mark
+  "\u203C": "!!", // Double exclamation mark
+  "\u2028": " ", // Whitespace: Line Separator
+  "\u2029": " ", // Whitespace: Paragraph Separator
+  "\u2026": "...", // Whitespace: Narrow No-Break Space
+  "\u2001": " ", // Whitespace: Medium Mathematical Space
+  "\u200b": "", // ZERO WIDTH SPACE
+  "\u3001": ",", // IDEOGRAPHIC COMMA
+  "\uFEFF": "", // ZERO WIDTH NO-BREAK SPACE
+  "\u2022": "-", // Bullet
+};
 
 /**
  * Replace Unicode characters with look-alikes.
- * https://www.twilio.com/docs/messaging/services/smart-encoding-char-list
+ * https://github.com/TwilioDevEd/message-segment-calculator/blob/main/src/libs/SmartEncodingMap.ts
  */
 export function smsCharacterReplacement(input: string): string {
   let output = "";
   for (const c of input) {
-    output += replacementLookup.get(c.charCodeAt(0)) ?? c;
+    output += replacementLookup[c] ?? c;
   }
   return output;
 }
