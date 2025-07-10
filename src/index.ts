@@ -6,6 +6,7 @@ import OpenAI from "openai";
 import * as z from "zod/v4";
 import { smsCharacterReplacement } from "./smsCharacterReplacement";
 import { env, WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+import { ResponseInputItem } from "openai/resources/responses/responses.js";
 
 const phoneNumberSchema = z.string().regex(/^\+1[0-9]{10}$/);
 
@@ -145,19 +146,23 @@ async function getModelResponse(userMessage: string, openai: OpenAI): Promise<st
     });
     // End generated code.
 
-    input = [];
-    for (const responsePart of response.output) {
-      if (responsePart.type !== "function_call") {
-        continue;
-      }
-      const args = weatherToolArgsSchema.safeParse(JSON.parse(responsePart.arguments));
-      const toolOutput = args.success ? await getWeatherForecast(args.data) : args.error.message;
-      input.push({
-        type: "function_call_output",
-        call_id: responsePart.call_id,
-        output: toolOutput,
-      });
+    if (response.error !== null) {
+      throw new Error(response.error.message);
     }
+
+    input = await Promise.all(
+      response.output
+        .filter((responsePart) => responsePart.type === "function_call")
+        .map(async (responsePart) => {
+          const args = weatherToolArgsSchema.safeParse(JSON.parse(responsePart.arguments));
+          const toolOutput = args.success ? await getWeatherForecast(args.data) : args.error.message;
+          return {
+            type: "function_call_output",
+            call_id: responsePart.call_id,
+            output: toolOutput,
+          } satisfies ResponseInputItem.FunctionCallOutput;
+        }),
+    );
 
     if (input.length === 0) {
       return smsCharacterReplacement(response.output_text);
