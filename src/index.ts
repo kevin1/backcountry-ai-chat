@@ -1,14 +1,5 @@
 /**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
+ * Chatbot for weather forecast & general knowledge over SMS.
  */
 
 import OpenAI from "openai";
@@ -234,7 +225,6 @@ type Params = {
 
 // The Workflow calls the model and sends the response SMS.
 export class BackcountryAIChatWorkflow extends WorkflowEntrypoint<Env, Params> {
-  // Define a run() method
   async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
     const responseText = await step.do(
       "call model",
