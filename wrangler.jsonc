@@ -50,6 +50,11 @@
       "store_id": "52ec5e5007784e308306e4a3ce4b7cdf",
       "secret_name": "TWILIO_USERNAME_PASSWORD",
     },
+    {
+      "binding": "WEATHER_GOV_API_USER_AGENT",
+      "store_id": "52ec5e5007784e308306e4a3ce4b7cdf",
+      "secret_name": "WEATHER_GOV_API_USER_AGENT",
+    },
   ],
 
   /**

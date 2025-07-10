@@ -5,7 +5,7 @@
 import OpenAI from "openai";
 import * as z from "zod/v4";
 import { smsCharacterReplacement } from "./smsCharacterReplacement";
-import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+import { env, WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 const phoneNumberSchema = z.string().regex(/^\+1[0-9]{10}$/);
 
@@ -172,7 +172,7 @@ async function getWeatherForecast({ lat, lon, type }: WeatherToolArgs): Promise<
 
   const headers = {
     Accept: "application/ld+json",
-    "User-Agent": "(kevinchen.co, contact@kevinchen.co)",
+    "User-Agent": await env.WEATHER_GOV_API_USER_AGENT.get(),
   } as const;
 
   const pointsResponse = await fetch(`https://api.weather.gov/points/${parsedLat},${parsedLon}`, { headers });
@@ -206,17 +206,6 @@ async function getWeatherForecast({ lat, lon, type }: WeatherToolArgs): Promise<
 function parseLatLong([d, m = 0, s = 0]: Coordinate): number {
   const sign = Math.sign(d);
   return sign * (Math.abs(d) + Math.abs(m) / 60 + Math.abs(s) / (60 * 60));
-}
-
-/** https://developers.cloudflare.com/secrets-store/integrations/workers/ */
-interface SecretStoreSecret {
-  get(): Promise<string>;
-}
-
-export interface Env {
-  OPENAI_API_KEY: SecretStoreSecret;
-  TWILIO_USERNAME_PASSWORD: SecretStoreSecret;
-  BACKCOUNTRY_AI_CHAT_WORKFLOW: Workflow<Params>;
 }
 
 type Params = {
@@ -304,11 +293,10 @@ export default {
     // Call the model asynchronously since Twilio has a 15-sec timeout for
     // webhooks and Cloudflare ctx.waitUntil has a 30-sec timeout after the
     // response is sent.
-    const workflowInstance = await env.BACKCOUNTRY_AI_CHAT_WORKFLOW.create({
+    await env.BACKCOUNTRY_AI_CHAT_WORKFLOW.create({
       id: crypto.randomUUID(),
       params: { requestMessage: requestMessage.data },
     });
-    console.log(`created workflow ${workflowInstance.id}`);
 
     // Return empty response to indicate success.
     // This is equivalent to `new MessagingResponse().toString()` with Twilio SDK.
