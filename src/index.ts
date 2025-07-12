@@ -143,8 +143,14 @@ async function getModelResponse(userMessage: string, openai: OpenAI): Promise<st
         },
       ],
       store: true,
+      background: true,
     });
     // End generated code.
+
+    while (response.status === "queued" || response.status === "in_progress") {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      response = await openai.responses.retrieve(response.id);
+    }
 
     if (response.error !== null) {
       throw new Error(response.error.message);
@@ -220,37 +226,37 @@ type Params = {
 // The Workflow calls the model and sends the response SMS.
 export class BackcountryAIChatWorkflow extends WorkflowEntrypoint<Env, Params> {
   async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
-    const responseText = await step.do(
-      "call model",
-      {
-        retries: {
-          limit: 5,
-          delay: "5 second",
-          backoff: "exponential",
+    let responseText: string | undefined;
+    try {
+      responseText = await step.do(
+        "call model",
+        {
+          retries: {
+            limit: 3,
+            delay: "2 minutes",
+            backoff: "constant",
+          },
+          timeout: "30 minutes",
         },
-        timeout: "15 minutes",
-      },
-      async () => {
-        const OPENAI_API_KEY = await this.env.OPENAI_API_KEY.get();
-
-        try {
-          return await getModelResponse(event.payload.requestMessage.Body, new OpenAI({ apiKey: OPENAI_API_KEY }));
-        } catch (e) {
-          console.error(e);
-          return "Error calling model: " + String(e);
-        }
-      },
-    );
+        async () =>
+          await getModelResponse(
+            event.payload.requestMessage.Body,
+            new OpenAI({ apiKey: await this.env.OPENAI_API_KEY.get(), maxRetries: 4 }),
+          ),
+      );
+    } catch (e) {
+      responseText = "Error calling model: " + String(e);
+    }
 
     await step.do(
       "send sms",
       {
         retries: {
-          limit: 5,
-          delay: "2 second",
+          limit: 10,
+          delay: "1 second",
           backoff: "exponential",
         },
-        timeout: "15 minutes",
+        timeout: "5 minutes",
       },
       async () => {
         const TWILIO_USERNAME_PASSWORD = await this.env.TWILIO_USERNAME_PASSWORD.get();
