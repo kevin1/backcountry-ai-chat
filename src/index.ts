@@ -236,7 +236,7 @@ export class BackcountryAIChatWorkflow extends WorkflowEntrypoint<Env, Params> {
             delay: "2 minutes",
             backoff: "constant",
           },
-          timeout: "30 minutes",
+          timeout: "60 minutes",
         },
         async () =>
           await getModelResponse(
@@ -293,12 +293,13 @@ export default {
       return new Response("Not Found", { status: 404 });
     }
     if (request.method !== "POST") {
-      return new Response("Bad Request: Method must be POST", { status: 400 });
+      return new Response("Bad Request: Method must be POST", { status: 422 });
     }
 
-    const requestMessage = twilioSmsSchema.safeParse(Object.fromEntries((await request.formData()).entries()));
+    const formData = await request.formData();
+    const requestMessage = twilioSmsSchema.safeParse(Object.fromEntries(formData.entries()));
     if (!requestMessage.success) {
-      return new Response(requestMessage.error.message, { status: 400 });
+      return new Response(requestMessage.error.message, { status: 422 });
     }
 
     // Call the model asynchronously since Twilio has a 15-sec timeout for
