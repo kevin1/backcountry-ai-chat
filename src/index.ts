@@ -73,6 +73,8 @@ const nwsGridForecastResponseSchema = z.object({
 });
 
 async function getModelResponse(userMessage: string, openai: OpenAI): Promise<string> {
+  const now = new Date().toISOString();
+
   let input: OpenAI.Responses.ResponseInput = [{ role: "user", content: userMessage }];
   let response: OpenAI.Responses.Response | undefined;
 
@@ -81,11 +83,14 @@ async function getModelResponse(userMessage: string, openai: OpenAI): Promise<st
     response = await openai.responses.create({
       prompt: {
         id: "pmpt_6869e3d835548193a8f58cf991c030ce06b7bf11c59935bf",
-        version: "12",
+        version: "14",
+        variables: {
+          current_time: now,
+        },
       },
       model: "o3-2025-04-16",
       reasoning: {
-        effort: "medium",
+        effort: "low",
       },
       previous_response_id: response?.id,
       input,
