@@ -83,17 +83,25 @@ async function getModelResponse(userMessage: string, openai: OpenAI): Promise<st
     response = await openai.responses.create({
       prompt: {
         id: "pmpt_6869e3d835548193a8f58cf991c030ce06b7bf11c59935bf",
-        version: "14",
+        version: "15",
         variables: {
           current_time: now,
         },
       },
-      model: "o3-2025-04-16",
+      model: "gpt-5",
       reasoning: {
         effort: "low",
+        summary: null,
       },
       previous_response_id: response?.id,
       input,
+      text: {
+        format: {
+          type: "text",
+        },
+        // @ts-expect-error
+        verbosity: "low",
+      },
       tools: [
         {
           type: "function",
@@ -147,14 +155,18 @@ async function getModelResponse(userMessage: string, openai: OpenAI): Promise<st
           },
         },
       ],
+      max_output_tokens: 64 * 1024,
       store: true,
       background: true,
     });
     // End generated code.
 
+    let delay = 2000;
     while (response.status === "queued" || response.status === "in_progress") {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, delay));
       response = await openai.responses.retrieve(response.id);
+      // Exponentially increase delay to avoid Cloudflare subrequest limit.
+      delay = Math.min(delay * 2, 10_000);
     }
 
     if (response.error !== null) {
