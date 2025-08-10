@@ -83,14 +83,14 @@ async function getModelResponse(userMessage: string, openai: OpenAI): Promise<st
     response = await openai.responses.create({
       prompt: {
         id: "pmpt_6869e3d835548193a8f58cf991c030ce06b7bf11c59935bf",
-        version: "15",
+        version: "16",
         variables: {
           current_time: now,
         },
       },
-      model: "gpt-5",
+      model: "gpt-5-2025-08-07",
       reasoning: {
-        effort: "low",
+        effort: "medium",
         summary: null,
       },
       previous_response_id: response?.id,
@@ -99,8 +99,6 @@ async function getModelResponse(userMessage: string, openai: OpenAI): Promise<st
         format: {
           type: "text",
         },
-        // @ts-expect-error
-        verbosity: "low",
       },
       tools: [
         {
